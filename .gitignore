@@ -1,0 +1,7 @@
+CLAUDE.md
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+calib.json
+camera_intrinsics.json

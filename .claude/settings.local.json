@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pdftotext \"c:/Users/a6bag/PRO-CVD/relavent papers/papers/CVD/Color Information Presentation for Color Vision Defective by Using a Projector Camera System.pdf\" -)",
+      "Bash(pdftotext \"c:/Users/a6bag/PRO-CVD/relavent papers/papers/Making_One_Object_Look_Like_Another_Controlling_Appearance_Using_ a_Projector_Camera_System.pdf\" -)"
+    ]
+  }
+}
