@@ -4,8 +4,19 @@
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/aruco.hpp>
-#include <opencv2/aruco/charuco.hpp>
+
+// ChArUco changed module and API in OpenCV 4.7. Support both so the project
+// builds across versions:
+//   4.7+  -> cv::aruco::CharucoDetector, CharucoBoard ctor, generateImage (objdetect)
+//   <=4.6 -> CharucoBoard::create, detectMarkers + interpolateCornersCharuco (aruco)
+#if (CV_VERSION_MAJOR > 4) || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 7)
+#  define PROCVD_ARUCO_NEW 1
+#  include <opencv2/objdetect.hpp>
+#else
+#  define PROCVD_ARUCO_NEW 0
+#  include <opencv2/aruco.hpp>
+#  include <opencv2/aruco/charuco.hpp>
+#endif
 
 #include "procvd/camera.hpp"
 #include "procvd/projector.hpp"
@@ -64,16 +75,26 @@ calibrate_geometry(ICamera& cam, IProjector& proj, const Config& cfg) {
     const int ox = (cfg.proj_w - bw) / 2;
     const int oy = (cfg.proj_h - bh) / 2;
 
-    // NOTE: ChArUco API targets OpenCV 4.6 (Ubuntu 24.04). On 4.7+ this becomes
-    // cv::aruco::CharucoDetector / generateImage — adjust if the build complains.
+    const std::vector<cv::Point2f> proj_corners = proj_corner_table(cfg, sq, ox, oy);
+
+    // Generate the board image with the version-appropriate ChArUco API.
+    cv::Mat board_img;
+#if PROCVD_ARUCO_NEW
+    const cv::aruco::Dictionary dict =
+        cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+    const cv::aruco::CharucoBoard board(
+        cv::Size(cfg.board_cols + 1, cfg.board_rows + 1),
+        static_cast<float>(sq), static_cast<float>(sq) * 0.75f, dict);
+    const cv::aruco::CharucoDetector detector(board);
+    board.generateImage(cv::Size(bw, bh), board_img, /*marginSize=*/0, /*borderBits=*/1);
+#else
     const cv::Ptr<cv::aruco::Dictionary> dict =
         cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
     const cv::Ptr<cv::aruco::CharucoBoard> board = cv::aruco::CharucoBoard::create(
         cfg.board_cols + 1, cfg.board_rows + 1,
         static_cast<float>(sq), static_cast<float>(sq) * 0.75f, dict);
-
-    cv::Mat board_img;
     board->draw(cv::Size(bw, bh), board_img, /*marginSize=*/0, /*borderBits=*/1);
+#endif
 
     cv::Mat canvas = cv::Mat::zeros(cfg.proj_h, cfg.proj_w, CV_8UC1);
     board_img.copyTo(canvas(cv::Rect(ox, oy, bw, bh)));
@@ -81,24 +102,24 @@ calibrate_geometry(ICamera& cam, IProjector& proj, const Config& cfg) {
     cv::cvtColor(canvas, canvas_bgr, cv::COLOR_GRAY2BGR);
     proj.show(canvas_bgr);
 
-    const std::vector<cv::Point2f> proj_corners = proj_corner_table(cfg, sq, ox, oy);
-
     for (int attempt = 0; attempt < 5; ++attempt) {
         cv::Mat frame = cam.fresh_frame();
         cv::Mat gray;
         cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
 
+        std::vector<cv::Point2f> charuco_corners;
+        std::vector<int> charuco_ids;
+#if PROCVD_ARUCO_NEW
+        detector.detectBoard(gray, charuco_corners, charuco_ids);
+#else
         std::vector<int> marker_ids;
         std::vector<std::vector<cv::Point2f>> marker_corners;
         cv::aruco::detectMarkers(gray, dict, marker_corners, marker_ids);
-        if (marker_ids.empty()) {
-            continue;
+        if (!marker_ids.empty()) {
+            cv::aruco::interpolateCornersCharuco(marker_corners, marker_ids, gray, board,
+                                                 charuco_corners, charuco_ids);
         }
-
-        std::vector<cv::Point2f> charuco_corners;
-        std::vector<int> charuco_ids;
-        cv::aruco::interpolateCornersCharuco(marker_corners, marker_ids, gray, board,
-                                             charuco_corners, charuco_ids);
+#endif
         if (charuco_ids.size() < static_cast<size_t>(cfg.min_charuco_corners)) {
             continue;
         }

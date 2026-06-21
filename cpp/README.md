@@ -32,9 +32,9 @@ Install OpenCV:
 sudo apt-get update && sudo apt-get install -y libopencv-dev
 ```
 
-> The ChArUco code in `geometry.cpp` targets the OpenCV **4.6** API
-> (`CharucoBoard::create`, `interpolateCornersCharuco`). On 4.7+ switch to
-> `cv::aruco::CharucoDetector` / `generateImage`.
+> `geometry.cpp` auto-selects the ChArUco API by OpenCV version (a `CV_VERSION`
+> check): `CharucoDetector`/`generateImage` on 4.7+, `CharucoBoard::create` +
+> `interpolateCornersCharuco` on ≤4.6. No manual change needed.
 
 ## Build & test
 
