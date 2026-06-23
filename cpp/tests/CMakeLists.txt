@@ -1,6 +1,5 @@
-# Plain-executable tests registered with CTest — no test framework dependency
-# (mirrors the Python `if __name__ == "__main__"` self-tests). Each test prints
-# a line and returns non-zero on failure.
+# Plain-executable tests registered with CTest.
+# Each test prints a line and returns non-zero on failure.
 
 add_executable(pattern_test pattern_test.cpp)
 target_link_libraries(pattern_test PRIVATE procvd_core)
