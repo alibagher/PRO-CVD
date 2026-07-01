@@ -2,6 +2,11 @@
 
 namespace procvd {
 
+// Which camera adapter to use.
+//   Usb = a USB webcam (default; works on any Linux, including WSL for dev)
+//   Csi = a Raspberry Pi camera module via libcamera/GStreamer
+enum class CameraKind { Usb, Csi };
+
 // All tunable runtime parameters in one place — no module globals.
 // Override with designated initialisers, e.g.
 //     Config cfg{ .cam_index = 1, .stripe_spacing = 6 };
@@ -13,7 +18,8 @@ struct Config {
     int proj_display_y = 0;
 
     // Camera input
-    int cam_index = 0;
+    CameraKind camera = CameraKind::Usb;  // set to Csi on the Raspberry Pi
+    int cam_index = 0;                    // USB camera only: which /dev/videoN
     int cam_w = 1280;
     int cam_h = 720;
 

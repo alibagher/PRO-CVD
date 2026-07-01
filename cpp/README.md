@@ -48,6 +48,24 @@ cmake --preset release && cmake --build build/release
 ./build/release/procvd      # run the device (needs a camera + projector)
 ```
 
+## Camera (USB vs Raspberry Pi module)
+
+The runtime uses a **USB webcam** by default. To use the **Pi camera module** (CSI),
+uncomment one line in [`src/main.cpp`](src/main.cpp):
+
+```cpp
+cfg.camera = CameraKind::Csi;
+```
+
+The Pi camera goes through libcamera's GStreamer source. On the Pi, install the
+plugin once and confirm the pipeline works before running `procvd`:
+
+```bash
+sudo apt install -y gstreamer1.0-libcamera gstreamer1.0-plugins-base \
+                    gstreamer1.0-plugins-good gstreamer1.0-tools
+gst-launch-1.0 libcamerasrc ! videoconvert ! autovideosink   # should show live video
+```
+
 ## Controls
 
 `c` combined (geometry + project) · `g` geometry only · `SPACE` (re)project ·
